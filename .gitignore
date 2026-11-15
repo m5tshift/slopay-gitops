@@ -6,12 +6,33 @@
 *.key
 *.p12
 *.pfx
-*.kubeconfig
-kubeconfig
+*kubeconfig
+*kubeconfig.yaml
+*kubeconfig.yml
 talosconfig
+# SSH keys, including the GitOps deploy key
+id_rsa*
+id_ecdsa*
+id_ed25519*
+!*.pub
+*deploy_key*
+# Output of `bao operator init`: unseal keys and root token
+*unseal-keys*
+*root-token*
+bao-init*
+# Talos machine configs contain cluster CA keys
+/controlplane.yaml
+/worker.yaml
+/secrets.yaml
 
-# Helm
-charts/*.tgz
+# Terraform state and variables
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Helm dependencies
+**/charts/*.tgz
 
 # Claude Code personal settings
 .claude/settings.local.json
