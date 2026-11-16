@@ -45,3 +45,15 @@ services/<component>/values.yaml   values чарта из Zot: сервисы, m
   только в ветки.
 - Репозиторий публичный: правила SRS 4.1.11 действуют и здесь. Перед первым коммитом в клоне —
   `pre-commit install` (gitleaks и базовые проверки).
+
+## Команды
+
+Нужны `yamllint`, `kubeconform` и `yq`; те же проверки идут в CI (`.github/workflows/pr.yml`).
+
+- `make lint` — yamllint (`.yamllint.yaml`).
+- `make validate` — kubeconform для манифестов в `apps/` и `platform/` (values-файлы пропускаются),
+  схемы CRD из закреплённого коммита datreeio/CRDs-catalog.
+- `make policy` — правила из этого файла, видимые по тексту: нет `Namespace`, `CreateNamespace=true`,
+  `Secret`, Bitnami; у каждого `Application` есть `argocd.argoproj.io/sync-wave`.
+- `make test-policy` — проверка `policy` на фикстурах из `test/policy/`.
+- `make precommit` — `pre-commit run --all-files` (gitleaks и базовые проверки).

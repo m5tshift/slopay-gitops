@@ -1,0 +1,23 @@
+.PHONY: lint validate policy test-policy precommit
+
+# CRD schemas for kubeconform, pinned to a commit of the datreeio catalog.
+CRD_CATALOG_SHA := 3e8a8916ca1b7af6464606c2c2f5869dbafa9653
+CRD_SCHEMAS := https://raw.githubusercontent.com/datreeio/CRDs-catalog/$(CRD_CATALOG_SHA)/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+
+lint:
+	yamllint --strict .
+
+# Manifests in apps/ and platform/; values files are not manifests.
+validate:
+	@files=$$(find apps platform -type f \( -name '*.yaml' -o -name '*.yml' \) ! -name 'values*.yaml' ! -name 'values*.yml' 2>/dev/null); \
+	if [ -z "$$files" ]; then echo "validate: no manifests"; exit 0; fi; \
+	echo "$$files" | xargs kubeconform -strict -summary -schema-location default -schema-location '$(CRD_SCHEMAS)'
+
+policy:
+	hack/policy.sh
+
+test-policy:
+	hack/policy_test.sh
+
+precommit:
+	pre-commit run --all-files
