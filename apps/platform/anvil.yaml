@@ -1,0 +1,33 @@
+# Wave 3: Anvil, the test chain node (SRS 4.1.3, 5, 6.4). Own manifests on the Foundry image; the chain state
+# lives on a local-path PV. The Secret anvil-mnemonic in chain comes from the stand secrets script, not from git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: anvil
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  source:
+    repoURL: https://github.com/m5tshift/slopay-gitops
+    targetRevision: main
+    path: platform/anvil
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: chain
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
