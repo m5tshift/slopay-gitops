@@ -1,0 +1,34 @@
+# Wave 2: MongoDB, replica set of 1 member, no backups (SRS 4.1.6, 6.4).
+# The Secret mongodb-users in data (password of chain-watcher) comes from the stand secrets script (later ESO),
+# not from git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: percona-mongodb
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  source:
+    repoURL: https://github.com/m5tshift/slopay-gitops
+    targetRevision: main
+    path: platform/percona-mongodb/cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
