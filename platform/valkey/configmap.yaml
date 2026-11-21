@@ -1,0 +1,23 @@
+# Cache without persistence. Users and passwords are in users.acl, built by the init container from the
+# Secret valkey-users.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: valkey-config
+data:
+  valkey.conf: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    dir /data
+    save ""
+    appendonly no
+    aclfile /acl/users.acl
+    maxmemory 192mb
+    maxmemory-policy volatile-lru
+  # One ACL user per service, keys limited to its prefix (key prefixes are in the services' code).
+  # The line has no password: the init container appends "#<sha256>" from the Secret key named as the user.
+  users.tmpl: |
+    invoice-service ~invoice:status:* -@all +get +set +ping +hello +client|setinfo +client|setname
+    chain-watcher ~chain-watcher:* -@all +sismember +sadd +srem +del +ping +hello +client|setinfo +client|setname
+    rate-service ~rate:latest:* -@all +hset +hgetall +ping +hello +client|setinfo +client|setname

@@ -1,0 +1,117 @@
+# One replica, emptyDir: a restart drops the cache, the services refill it (SRS 4.1.7).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: valkey
+  labels:
+    app.kubernetes.io/name: valkey
+spec:
+  serviceName: valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Builds /acl/users.acl: "user <name> on #<sha256 of the password> <rules>". The passwords are read from
+        # files and hashed through shell builtins and a pipe, so they are neither in the arguments nor in logs.
+        - name: acl
+          image: valkey/valkey:8.1.12-alpine@sha256:9971099af41c36e887aabdfe22b80c0fe45df949163dfc9cb434febc57cfc3fc
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              umask 077
+              out=/acl/users.acl
+              echo "user default off" > "$out"
+              while read -r name rules; do
+                [ -n "$name" ] || continue
+                pw=$(cat "/secrets/$name")
+                [ -n "$pw" ] || { echo "empty password for $name" >&2; exit 1; }
+                hash=$(printf '%s' "$pw" | sha256sum | cut -d' ' -f1)
+                echo "user $name on #$hash $rules" >> "$out"
+              done < /config/users.tmpl
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          volumeMounts:
+            - name: acl
+              mountPath: /acl
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: users
+              mountPath: /secrets
+              readOnly: true
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1.12-alpine@sha256:9971099af41c36e887aabdfe22b80c0fe45df949163dfc9cb434febc57cfc3fc
+          args: ["/config/valkey.conf"]
+          ports:
+            - name: valkey
+              containerPort: 6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            tcpSocket:
+              port: valkey
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: valkey
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: acl
+              mountPath: /acl
+              readOnly: true
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: acl
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: data
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: config
+          configMap:
+            name: valkey-config
+        - name: users
+          secret:
+            secretName: valkey-users
