@@ -1,0 +1,16 @@
+# Values for the upstream psmdb-operator chart 1.23.2 (operator 1.23.1), SRS 4.1.6, 6.4.
+# The operator watches only data: the namespace is created by bootstrap.
+replicaCount: 1
+
+watchNamespace: data
+watchAllNamespaces: false
+
+disableTelemetry: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
