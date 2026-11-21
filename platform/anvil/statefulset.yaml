@@ -1,0 +1,90 @@
+# One replica: SRS sets no replication for Anvil (ADR 0007). The chain state is dumped to the PV (--state) and
+# survives a restart. The mnemonic is read from the Secret anvil-mnemonic (stand secrets script); the payer-sim
+# keys are derived from it (indexes 0-9), so the funded accounts match.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: anvil
+  labels:
+    app.kubernetes.io/name: anvil
+spec:
+  serviceName: anvil
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: anvil
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: anvil
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: anvil
+          image: ghcr.io/foundry-rs/foundry:v1.10.0@sha256:03ca6dc0accb53b6f67278b5a1c70bef984d5a2a2bcb197298c3b6f3b929c798
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              exec anvil --host 0.0.0.0 --port 8545 --chain-id 31337 --block-time 2
+              --accounts 10 --balance 10000 --mnemonic "$ANVIL_MNEMONIC"
+              --state /data/state.json --state-interval 2
+          env:
+            - name: ANVIL_MNEMONIC
+              valueFrom:
+                secretKeyRef:
+                  name: anvil-mnemonic
+                  key: mnemonic
+            - name: HOME
+              value: /tmp
+          ports:
+            - name: rpc
+              containerPort: 8545
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          # JSON-RPC answers POST only, so the probes call cast instead of an HTTP GET.
+          readinessProbe:
+            exec:
+              command: ["cast", "chain-id", "--rpc-url", "http://127.0.0.1:8545"]
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["cast", "chain-id", "--rpc-url", "http://127.0.0.1:8545"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
