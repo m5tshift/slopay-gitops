@@ -1,0 +1,32 @@
+# Wave 2: Kafka KRaft, one broker, and the topics of the minimal stand (SRS 4.1.5, 6.4). The operator is wave 1.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kafka
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  source:
+    repoURL: https://github.com/m5tshift/slopay-gitops
+    targetRevision: main
+    path: platform/strimzi/cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
