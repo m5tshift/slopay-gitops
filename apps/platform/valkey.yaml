@@ -1,0 +1,33 @@
+# Wave 3: Valkey cache, one instance without persistence (SRS 4.1.7, 6.4). Own manifests on the official image:
+# the Secret valkey-users in data comes from the stand secrets script (later ESO), not from git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: valkey
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  source:
+    repoURL: https://github.com/m5tshift/slopay-gitops
+    targetRevision: main
+    path: platform/valkey
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
