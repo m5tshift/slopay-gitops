@@ -1,0 +1,40 @@
+# Wave 1: CloudNativePG operator (SRS 4.1.6, 6.4). Upstream chart cloudnative-pg 0.29.2 (operator 1.30.2).
+# Runs in data: the namespace is created by bootstrap and cnpg-system is not a destination of the project.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  sources:
+    - repoURL: https://cloudnative-pg.github.io/charts
+      chart: cloudnative-pg
+      targetRevision: 0.29.2
+      helm:
+        releaseName: cnpg
+        valueFiles:
+          - $values/platform/cnpg/operator/values.yaml
+    - repoURL: https://github.com/m5tshift/slopay-gitops
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

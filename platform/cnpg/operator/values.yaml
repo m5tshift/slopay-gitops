@@ -1,0 +1,15 @@
+# Values for the upstream cloudnative-pg chart (SRS 4.1.6, 6.4).
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+monitoring:
+  podMonitorEnabled: false
+  grafanaDashboard:
+    create: false
