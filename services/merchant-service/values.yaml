@@ -1,0 +1,53 @@
+# merchant-service on the minimal stand (SRS 6.4); merged over charts/merchant-service/values.yaml of slopay.
+image:
+  repository: ghcr.io/m5tshift/slopay/merchant-service
+  # Updated by CI of slopay after the image build; not edited by hand.
+  tag: 8edacb2
+
+# SRS 6.4: one replica of every component; a PDB of one replica would block the drain of the only worker.
+replicaCount: 1
+pdb:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+
+# No observability on the minimal stand: an empty endpoint turns the OTLP export off.
+telemetry:
+  otlpEndpoint: ""
+
+kafka:
+  enabled: true
+  brokers:
+    - slopay-kafka-bootstrap.kafka.svc:9092
+
+# Secrets in apps made by the stand secrets script (slopay infra/stand-secrets): merchant-service-postgres
+# (password of the CNPG owner merchant-service) and merchant-service-jwt-signing (private.pem).
+secrets:
+  - name: postgres
+  - name: jwt-signing
+
+postgres:
+  enabled: true
+  url: postgres://merchant-service@merchant-pg-rw.data.svc:5432/merchant
+  password:
+    secret: postgres
+    key: password
+
+env:
+  JWT_SIGNING_KEY_FILE: /var/run/secrets/slopay/jwt-signing/private.pem
+  JWT_ISSUER: slopay-merchant-service
+  # SRS 4.1.10: JWT lifetime 15 min, rotation grace period 24 h, at most two active API keys.
+  JWT_TTL: 15m
+  JWKS_MAX_AGE: 5m
+  API_KEY_ROTATION_GRACE: 24h
+  API_KEY_MAX_ACTIVE: "2"
+  # SRS 4.1.4: payment tolerance 0..5 %, 1 % by default (basis points).
+  TOLERANCE_DEFAULT_BPS: "100"
+  TOLERANCE_MAX_BPS: "500"
+  LOG_LEVEL: info

@@ -1,4 +1,4 @@
-.PHONY: lint validate policy test-policy precommit
+.PHONY: lint validate template policy test-policy precommit
 
 # CRD schemas for kubeconform, pinned to a commit of the datreeio catalog.
 CRD_CATALOG_SHA := 3e8a8916ca1b7af6464606c2c2f5869dbafa9653
@@ -12,6 +12,11 @@ validate:
 	@files=$$(find apps platform -type f \( -name '*.yaml' -o -name '*.yml' \) ! -name 'values*.yaml' ! -name 'values*.yml' 2>/dev/null); \
 	if [ -z "$$files" ]; then echo "validate: no manifests"; exit 0; fi; \
 	echo "$$files" | xargs kubeconform -strict -summary -schema-location default -schema-location '$(CRD_SCHEMAS)'
+
+# Charts of services/ from a checkout of slopay rendered with the stand values (hack/template.sh).
+SLOPAY_DIR ?= ../slopay
+template:
+	SLOPAY_DIR=$(SLOPAY_DIR) hack/template.sh
 
 policy:
 	hack/policy.sh

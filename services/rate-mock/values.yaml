@@ -1,0 +1,30 @@
+# rate-mock on the minimal stand (SRS 6.4); merged over charts/rate-mock/values.yaml of slopay.
+image:
+  repository: ghcr.io/m5tshift/slopay/rate-mock
+  # Updated by CI of slopay after the image build; not edited by hand.
+  tag: 8edacb2
+
+# The command state lives in memory, so one replica; no PDB.
+replicaCount: 1
+pdb:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
+
+# No observability on the minimal stand: an empty endpoint turns the OTLP export off.
+telemetry:
+  otlpEndpoint: ""
+
+env:
+  BASE_PRICE_ETH_USD: "3700"
+  BASE_PRICE_USDT_USD: "1"
+  TICK_INTERVAL: 1s
+  WALK_STEP_BPS: "2"
+  WALK_BAND_BPS: "10"
+  LOG_LEVEL: info

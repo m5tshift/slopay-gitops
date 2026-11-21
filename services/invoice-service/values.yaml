@@ -1,0 +1,71 @@
+# invoice-service on the minimal stand (SRS 6.4); merged over charts/invoice-service/values.yaml of slopay.
+image:
+  repository: ghcr.io/m5tshift/slopay/invoice-service
+  # Updated by CI of slopay after the image build; not edited by hand.
+  tag: 8edacb2
+
+# SRS 6.4: one replica of every component; a PDB of one replica would block the drain of the only worker.
+replicaCount: 1
+pdb:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi
+
+# No observability on the minimal stand: an empty endpoint turns the OTLP export off.
+telemetry:
+  otlpEndpoint: ""
+
+kafka:
+  enabled: true
+  brokers:
+    - slopay-kafka-bootstrap.kafka.svc:9092
+
+# Secrets in apps made by the stand secrets script (slopay infra/stand-secrets): invoice-service-postgres
+# (password of the CNPG owner invoice-service) and invoice-service-valkey (ACL user invoice-service).
+secrets:
+  - name: postgres
+  - name: valkey
+
+postgres:
+  enabled: true
+  url: postgres://invoice-service@invoice-pg-rw.data.svc:5432/invoice
+  password:
+    secret: postgres
+    key: password
+
+valkey:
+  enabled: true
+  addrs:
+    - valkey.data.svc:6379
+  username: invoice-service
+  password:
+    secret: valkey
+    key: password
+
+env:
+  KAFKA_CONSUMER_GROUP: invoice-service
+  RATE_SERVICE_URL: http://rate-service.apps.svc:8080
+  RATE_SERVICE_TIMEOUT: 1s
+  # SRS 4.1.3: a rate older than 60 s is not used.
+  RATE_MAX_AGE: 60s
+  RATE_RETRY_AFTER: 5s
+  # SRS 4.1.4: invoice lifetime 15 min, PAID after N = 7 confirmations; Anvil chain id.
+  INVOICE_TTL: 15m
+  CONFIRMATIONS: "7"
+  CHAIN_ID: "31337"
+  # SRS 4.1.7: status cache TTL 30 s; addresses are tracked 24 h after the invoice.
+  STATUS_CACHE_TTL: 30s
+  TRACKING_WINDOW: 24h
+  VALKEY_TIMEOUT: 100ms
+  JWT_ISSUER: slopay-merchant-service
+  JWKS_URL: http://merchant-service.apps.svc:8080/.well-known/jwks.json
+  JWKS_TIMEOUT: 2s
+  JWKS_REFRESH: 5m
+  JWKS_MIN_INTERVAL: 10s
+  LOG_LEVEL: info
