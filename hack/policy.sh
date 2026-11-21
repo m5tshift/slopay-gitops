@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Checks the AGENTS.md rules that are visible in the text of manifests.
-# Usage: hack/policy.sh [path...]   (default: apps platform; missing paths are skipped)
+# Usage: hack/policy.sh [path...]   (default: apps platform services; missing paths are skipped)
 set -euo pipefail
 
 paths=()
-for p in "${@:-apps platform}"; do
+for p in "${@:-apps platform services}"; do
   for q in $p; do [ -e "$q" ] && paths+=("$q"); done
 done
 if [ "${#paths[@]}" -eq 0 ]; then

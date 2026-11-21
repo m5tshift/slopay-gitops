@@ -1,0 +1,78 @@
+# chain-watcher on the minimal stand (SRS 6.4); merged over charts/chain-watcher/values.yaml of slopay.
+image:
+  repository: ghcr.io/m5tshift/slopay/chain-watcher
+  # Updated by CI of slopay after the image build; not edited by hand.
+  tag: 8edacb2
+
+# SRS 6.4: one replica of every component; a PDB of one replica would block the drain of the only worker.
+# The single replica takes the Lease and reads blocks (SRS 4.1.3).
+replicaCount: 1
+pdb:
+  enabled: false
+leader:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+
+# No observability on the minimal stand: an empty endpoint turns the OTLP export off.
+telemetry:
+  otlpEndpoint: ""
+
+kafka:
+  enabled: true
+  brokers:
+    - slopay-kafka-bootstrap.kafka.svc:9092
+
+# Secrets in apps made by the stand secrets script (slopay infra/stand-secrets): chain-watcher-mongodb
+# (the same password as mongodb-users in data) and chain-watcher-valkey (ACL user chain-watcher).
+secrets:
+  - name: mongodb
+  - name: valkey
+
+# PerconaServerMongoDB mongodb in data, replica set rs0 of one member; the user lives in chain_watcher.
+mongodb:
+  enabled: true
+  uri: mongodb://mongodb-rs0.data.svc:27017/?replicaSet=rs0
+  username: chain-watcher
+  database: chain_watcher
+  authSource: chain_watcher
+  password:
+    secret: mongodb
+    key: password
+
+valkey:
+  enabled: true
+  addrs:
+    - valkey.data.svc:6379
+  username: chain-watcher
+  password:
+    secret: valkey
+    key: password
+
+env:
+  KAFKA_CONSUMER_GROUP: chain-watcher
+  # Anvil in chain (SRS 6.4).
+  NODE_URL: http://anvil.chain.svc:8545
+  CHAIN_ID: "31337"
+  NODE_TIMEOUT: 5s
+  NODE_BREAKER_FAILURE_THRESHOLD: "5"
+  NODE_BREAKER_OPEN_TIMEOUT: 15s
+  NODE_BREAKER_HALF_OPEN_MAX: "1"
+  BACKOFF_INITIAL: 500ms
+  BACKOFF_MAX: 30s
+  POLL_INTERVAL: 1s
+  # SRS 4.1.6: window of the last 64 headers; 4.1.9: reorgs up to 6 blocks.
+  WINDOW_SIZE: "64"
+  REORG_MAX_DEPTH: "6"
+  # SRS 4.1.7: an address is tracked 24 h; the projection is rebuilt from 26 h of invoice.events.
+  TRACKING_WINDOW: 24h
+  PROJECTION_REBUILD_WINDOW: 26h
+  RESCAN_CLOCK_SKEW: 30s
+  VALKEY_TIMEOUT: 100ms
+  LOG_LEVEL: info

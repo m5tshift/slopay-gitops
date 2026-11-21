@@ -1,0 +1,71 @@
+# rate-service on the minimal stand (SRS 6.4); merged over charts/rate-service/values.yaml of slopay.
+image:
+  repository: ghcr.io/m5tshift/slopay/rate-service
+  # Updated by CI of slopay after the image build; not edited by hand.
+  tag: 8edacb2
+
+# SRS 6.4: one replica of every component; a PDB of one replica would block the drain of the only worker.
+# The single replica takes the Lease and polls the sources (SRS 4.1.3).
+replicaCount: 1
+pdb:
+  enabled: false
+leader:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+
+# No observability on the minimal stand: an empty endpoint turns the OTLP export off.
+telemetry:
+  otlpEndpoint: ""
+
+kafka:
+  enabled: true
+  brokers:
+    - slopay-kafka-bootstrap.kafka.svc:9092
+
+# Secret in apps made by the stand secrets script (slopay infra/stand-secrets): rate-service-valkey.
+secrets:
+  - name: valkey
+
+valkey:
+  enabled: true
+  addrs:
+    - valkey.data.svc:6379
+  username: rate-service
+  password:
+    secret: valkey
+    key: password
+
+# No Istio on the minimal stand.
+istio:
+  destinationRule:
+    enabled: false
+  virtualService:
+    enabled: false
+
+env:
+  # SRS 4.1.3: the mock mode, two sources imitated by rate-mock.
+  RATE_SOURCE_MODE: mock
+  RATE_MOCK_URL: http://rate-mock.apps.svc:8080
+  SOURCE_TIMEOUT: 2s
+  # SRS 4.1.3: poll every 5 s, a rate older than 60 s is stale, USDT/USD is used for 1 h,
+  # sources diverging by more than 1 % (100 bps) give 503.
+  POLL_INTERVAL: 5s
+  RATE_MAX_AGE: 60s
+  USDT_MAX_AGE: 1h
+  DIVERGENCE_MAX_BPS: "100"
+  RETRY_AFTER: 5s
+  VALKEY_TIMEOUT: 200ms
+  # SRS 4.1.9: circuit breaker per source.
+  SOURCE_BREAKER_FAILURE_THRESHOLD: "3"
+  SOURCE_BREAKER_OPEN_TIMEOUT: 30s
+  SOURCE_BREAKER_HALF_OPEN_MAX: "1"
+  # Fault injection is for the trials of section 8 on the full stand.
+  FAULT_INJECTION_ENABLED: "false"
+  LOG_LEVEL: info

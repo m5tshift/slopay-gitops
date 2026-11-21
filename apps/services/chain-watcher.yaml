@@ -1,0 +1,39 @@
+# Wave 4: chain-watcher, reads Anvil blocks and transfers (SRS 4.1.3).
+# Minimal stand (SRS 6.4): the chart comes from git of the main repository, values and the GHCR image tag from here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chain-watcher
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: slopay
+  sources:
+    - repoURL: https://github.com/m5tshift/slopay
+      targetRevision: main
+      path: charts/chain-watcher
+      helm:
+        releaseName: chain-watcher
+        valueFiles:
+          - $values/services/chain-watcher/values.yaml
+    - repoURL: https://github.com/m5tshift/slopay-gitops
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
