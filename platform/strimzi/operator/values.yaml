@@ -1,0 +1,10 @@
+# Values for the strimzi-kafka-operator chart (SRS INF-2.3, 6.4).
+watchNamespaces:
+  - kafka
+resources:
+  limits:
+    memory: 384Mi
+    cpu: 1000m
+  requests:
+    memory: 384Mi
+    cpu: 200m

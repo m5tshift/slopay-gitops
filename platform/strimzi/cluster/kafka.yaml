@@ -1,0 +1,30 @@
+# Address for services: slopay-kafka-bootstrap.kafka.svc:9092 (plain, no TLS, no authentication on the minimal stand).
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: slopay
+  namespace: kafka
+spec:
+  kafka:
+    version: 4.3.2
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+    config:
+      auto.create.topics.enable: false
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+  entityOperator:
+    topicOperator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi

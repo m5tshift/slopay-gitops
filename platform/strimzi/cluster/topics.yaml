@@ -1,0 +1,87 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: chain-blocks
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: chain.blocks
+  partitions: 1
+  replicas: 1
+  config:
+    cleanup.policy: delete
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: chain-transfers
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: chain.transfers
+  partitions: 6
+  replicas: 1
+  config:
+    cleanup.policy: delete
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: invoice-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: invoice.events
+  partitions: 6
+  replicas: 1
+  config:
+    cleanup.policy: delete
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: merchant-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: merchant.events
+  partitions: 3
+  replicas: 1
+  config:
+    cleanup.policy: compact
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: rate-ticks
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: rate.ticks
+  partitions: 3
+  replicas: 1
+  config:
+    cleanup.policy: delete
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: rate-latest
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  topicName: rate.latest
+  partitions: 1
+  replicas: 1
+  config:
+    cleanup.policy: compact

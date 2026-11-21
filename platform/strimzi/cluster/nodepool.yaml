@@ -1,0 +1,31 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: slopay
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        class: local-path
+        size: 10Gi
+        deleteClaim: false
+        kraftMetadata: shared
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1536Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
+  jvmOptions:
+    -Xms: 768m
+    -Xmx: 768m
